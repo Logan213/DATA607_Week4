@@ -1,0 +1,131 @@
+---
+title: "DATA607 Week 4 Assignment"
+author: "Logan Thomson"
+date: "February 18, 2016"
+output: html_document
+---
+
+***
+
+```{r}
+library(stringr)
+```
+
+
+#####**3.** Copy the introductory example. The vector `name` stores the extracted names.  
+```{r}
+raw.data <- "555-1239Moe Szyslak(636) 555-0113Burns, C. Montgomery555-6542Rev. Timothy Lovejoy555 8904Ned Flanders636-555-3226Simpson, Homer5543642Dr. Julius Hibbert"
+
+name <- unlist(str_extract_all(raw.data, "[[:alpha:]., ]{2,}"))
+```
+
+**(a)** Use the tools of this chapter to rearrange the vector so that all elements conform to the standard `first_name last_name`.  
+
+
+There's probably a prettier way to do this using a loop, but I will simply take apart the string and then put it back together.  
+
+First, we can create a vector of the correct names using string indicies, and simply call it `first_last`, and then another with the non-standard name order called `last_first`.
+```{r}
+first_last <- c(name[1], name[3], name[4], name[6])
+first_last
+last_first <- c(name[2], name[5])
+last_first
+```  
+
+After we have separated our names, we can create a new vector for Mr. Burns and Homer to rearrange their names into first, last order. Since both are separated with a comma, we can split the string on that character using `str_split`, then trim the excess space from the start of the first name using `str_trim`. Lastly, we can simply combine the two names using string indicies and concatenating them.  
+
+```{r}
+Burns <- unlist(str_split(last_first[1], ","))
+Burns <- str_trim(Burns)
+Burns <- str_c(Burns[2], Burns[1], sep=" ")
+Burns
+```  
+
+We can now do the same thing for Homer:  
+
+```{r}
+Homer <- unlist(str_split(last_first[2], ","))
+Homer <- str_trim(Homer)
+Homer <- str_c(Homer[2], Homer[1], sep=" ")
+Homer
+```  
+
+Now, we can put our correct order vector (`first_last`) together with our rearranged `Burns` and `Homer` objects:
+
+```{r}
+name <- c(first_last, Burns, Homer)
+name
+```  
+
+
+**(b)** Construct a logical vector inidcating whether a character has a title (i.e., `Rev.` and `Dr.`).  
+
+```{r}
+title_bool <- str_detect(name, "[[:alpha:]]{2,}\\.")
+title_bool
+```
+
+**(c)** Construct a logical vector indicating whether a character has a second name.  
+
+```{r}
+second_name <- str_detect(name, "[A-Z]\\.{1}")
+second_name
+```
+
+#####**7.** Consider the string `<title>+++BREAKING NEWS+++</title>`. We would like to extract the first HTML tag. To do so we write the regular expression `<.+>`. Explain why this fails and correct the expression.  
+
+```{r}
+html_string <- "<title>+++BREAKING NEWS+++</title>"
+str_extract(html_string, "<.+>")
+```
+
+Using the above expression yields the entire string because of the `+` quantifier in combination with ".", which matches any character. This basically returns everything between the first and last character, which happen to be `<` and `>`, the same characters that surround an HTML tag, instead of the first tag only.  
+
+We can change the expression by either adding a `?`, which will then only match the preceeding characters (`<.+`) only once:
+
+```{r}
+str_extract(html_string, "<.+?>")
+```
+
+Or we can simply change the `.` to alpha characters, since the first tag only contains the word `title`:
+
+```{r}
+str_extract(html_string, "<[a-z]+>")
+```
+
+
+#####**8.** Consider the string `(5-3)^2=5^2-2*5*3+3^2` confroms to the binomial theorem. We would like to extract the formula in the string. To do so we write the regular expression `[^0-9=+*()]+`. Explain why this fails and correct the expression.
+
+The given regular expression fails because of the `^` at the beginning of the expression. This will invert the meanings of the characters in the expression, so everything *except* what is in the expression will be returned. The reason why `-` is returned is because this symbol is actually missing from the given expression; the `-` in between `0-9` is for digits 0 through 9, and won't count as a `-` on its own.  
+
+```{r}
+theorem <- "(5-3)^2=5^2-2*5*3+3^2"
+str_extract(theorem, "[^0-9=+*()]+")
+```
+
+To correct the regular expression, we must double escape the carat at the beginning of the expression so that it is not recognized as a quantifier but as an actual carat, and then add another `-` so that we return those symbols as well:  
+
+```{r}
+str_extract(theorem, "[\\^0-9-=+*()]+")
+```
+
+
+#####**9.** The following code hides a secret message. Crack it with R and regular expressions.  
+*clcopCow1zmstc0d87wnkig7OvdicpNuggvhryn92Gjuwczi8hqrfpRxs5Aj5dwpn0TanwoUwisdij7Lj8kpf03AT5
+Idr3coc0bt7yczjatOaootj55t3Nj3ne6c4Sfek.r1w1YwwojigOd6vrfUrbz2.2bkAnbhzgv4R9i05zEcrop.wAgn
+b.SqoU65fPa1otfb7wEm24k6t3sR9zqe5fy89n6Nd5t9kc4fE905gmc4Rgxo5nhDk!gr*  
+
+```{r}
+snippet <- "clcopCow1zmstc0d87wnkig7OvdicpNuggvhryn92Gjuwczi8hqrfpRxs5Aj5dwpn0TanwoUwisdijLj8kpf03AT5Idr3coc0bt7yczjatOaootj55t3Nj3ne6c4Sfek.r1w1YwwojigOd6vrfUrbz2.2bkAnbhzgv4R9i05zEcrop.wAgnb.SqoU65fPa1otfb7wEm24k6t3sR9zqe5fy89n6Nd5t9kc4fE905gmc4Rgxo5nhDk!gr"
+```
+
+To find some kind of pattern, I cycled through the different predefined character classes (`[:alpha]`, `[:digit:]`, `[:lower:]`, `[:upper:]`) and quickly seeing that all upper-case letters revealed a message. To make a sentence, I included the exclamation at the end, as well as the "." to later manipulate and turn into spaces:
+
+```{r}
+secret_msg <- unlist(str_extract_all(snippet, "[[:upper:].! ]"))
+secret_msg <- paste(secret_msg, sep="", collapse="")
+secret_msg <- str_replace_all(secret_msg, "[\\.]", " ")
+secret_msg
+```
+
+Apparently I'm a "supernerd", but I knew that already.  
